@@ -1,0 +1,30 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.env
+*.log
+.DS_Store
+.vscode/
+.idea/
+generated/
+runtime/
+
+# Runtime data volumes (bind-mounted or generated locally, never committed)
+infrastructure/mosquitto/data/
+infrastructure/mosquitto/log/
+infrastructure/timescaledb/data/
+infrastructure/prometheus/data/
+infrastructure/grafana/data/
+pgdata/
+grafana-data/
+prometheus-data/
+mosquitto-data/
+
+# Generated/simulated telemetry output
+data/generated/
+data/*.tmp.jsonl

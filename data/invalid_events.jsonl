@@ -1,0 +1,8 @@
+{"message_id": "not-a-uuid", "device_id": "MIF-001", "timestamp": "2026-09-06T08:00:00Z", "state": "ON"}
+{"message_id": "b1111111-0000-4000-8000-000000000001", "device_id": "MIF-001", "timestamp": "2026-09-06T08:00:00", "state": "ON"}
+{"message_id": "b1111111-0000-4000-8000-000000000002", "device_id": "MIF-001", "timestamp": "2026-09-06T08:00:00Z", "state": "RUNNING"}
+{"message_id": "b1111111-0000-4000-8000-000000000003", "device_id": "MIF-001", "timestamp": "2026-09-06T08:00:00Z", "state": "ON", "battery_percent": 150}
+{"message_id": "b1111111-0000-4000-8000-000000000004", "device_id": "MIF-001", "timestamp": "2026-09-06T08:00:00Z", "state": "ON", "battery_percent": -5}
+{"message_id": "b1111111-0000-4000-8000-000000000005", "device_id": "MIF-001", "timestamp": "2026-09-06T08:00:00Z", "state": "ON", "power_watts": -1.5}
+{"message_id": "b1111111-0000-4000-8000-000000000006", "device_id": "", "timestamp": "2026-09-06T08:00:00Z", "state": "ON"}
+this line is not even json

@@ -1,0 +1,115 @@
+{
+  "title": "Embedded Device Fleet Overview",
+  "uid": "embedded-fleet-overview",
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Telemetry Ingestion Rate",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "targets": [
+        { "expr": "rate(telemetry_messages_received_total[1m])", "legendFormat": "received" },
+        { "expr": "rate(telemetry_messages_valid_total[1m])", "legendFormat": "valid" },
+        { "expr": "sum(rate(telemetry_messages_rejected_total[1m]))", "legendFormat": "rejected" }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Valid vs Rejected Messages (total)",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "targets": [
+        { "expr": "telemetry_messages_valid_total", "legendFormat": "valid" },
+        { "expr": "sum(telemetry_messages_rejected_total)", "legendFormat": "rejected" },
+        { "expr": "telemetry_duplicates_total", "legendFormat": "duplicates" }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "State Distribution (raw telemetry, last 6h)",
+      "type": "piechart",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
+      "datasource": { "type": "postgres", "uid": "TimescaleDB" },
+      "targets": [
+        {
+          "rawSql": "SELECT state, count(*) AS value FROM telemetry_events WHERE time > now() - interval '6 hours' GROUP BY state",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Approx. State Duration - last 24h (hours, gap/reboot-naive)",
+      "type": "bargauge",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 },
+      "datasource": { "type": "postgres", "uid": "TimescaleDB" },
+      "description": "Approximate only: unlike the /devices/{id}/analytics API endpoint, this panel does not exclude communication gaps or reboot boundaries.",
+      "targets": [
+        {
+          "rawSql": "WITH ordered AS (SELECT device_id, time, state, LEAD(time) OVER (PARTITION BY device_id ORDER BY time) AS next_time FROM telemetry_events WHERE time > now() - interval '1 day') SELECT state, SUM(EXTRACT(EPOCH FROM (next_time - time)))/3600.0 AS value FROM ordered WHERE next_time IS NOT NULL GROUP BY state",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Approx. Usage % / Power-Saving % - last 24h",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 },
+      "datasource": { "type": "postgres", "uid": "TimescaleDB" },
+      "targets": [
+        {
+          "rawSql": "WITH ordered AS (SELECT device_id, time, state, LEAD(time) OVER (PARTITION BY device_id ORDER BY time) AS next_time FROM telemetry_events WHERE time > now() - interval '1 day'), durations AS (SELECT state, EXTRACT(EPOCH FROM (next_time - time)) AS seconds FROM ordered WHERE next_time IS NOT NULL) SELECT 100.0 * SUM(seconds) FILTER (WHERE state='ON') / NULLIF(SUM(seconds),0) AS usage_percent, 100.0 * SUM(seconds) FILTER (WHERE state IN ('SLEEP','OFF')) / NULLIF(SUM(seconds),0) AS power_saving_percent FROM durations",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Communication Gaps / Reboots (total)",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "Prometheus" },
+      "targets": [
+        { "expr": "device_communication_gaps_total", "legendFormat": "gaps" },
+        { "expr": "device_reboots_total", "legendFormat": "reboots" },
+        { "expr": "telemetry_out_of_order_total", "legendFormat": "out_of_order" },
+        { "expr": "mqtt_processing_errors_total", "legendFormat": "processing_errors" }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Anomaly Counts by Type",
+      "type": "barchart",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "datasource": { "type": "postgres", "uid": "TimescaleDB" },
+      "targets": [
+        {
+          "rawSql": "SELECT anomaly_type, count(*) AS value FROM anomalies WHERE detected_at > now() - interval '7 days' GROUP BY anomaly_type ORDER BY value DESC",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Estimated Avg Power by State, last 24h (watts, informational)",
+      "type": "bargauge",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "datasource": { "type": "postgres", "uid": "TimescaleDB" },
+      "description": "Average of observed power_watts samples per state; used by the API as the basis for kWh energy estimates.",
+      "targets": [
+        {
+          "rawSql": "SELECT state, avg(power_watts) AS value FROM telemetry_events WHERE power_watts IS NOT NULL AND time > now() - interval '1 day' GROUP BY state",
+          "format": "table"
+        }
+      ]
+    }
+  ]
+}

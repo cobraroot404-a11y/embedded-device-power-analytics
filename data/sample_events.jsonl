@@ -1,0 +1,8 @@
+{"message_id": "a1111111-0000-4000-8000-000000000001", "device_id": "MIF-001", "timestamp": "2026-09-06T08:00:00Z", "state": "ON", "battery_percent": 92.5, "power_watts": 4.8, "boot_id": "boot-a"}
+{"message_id": "a1111111-0000-4000-8000-000000000002", "device_id": "MIF-001", "timestamp": "2026-09-06T08:45:00Z", "state": "SLEEP", "battery_percent": 91.0, "power_watts": 0.7, "boot_id": "boot-a"}
+{"message_id": "a1111111-0000-4000-8000-000000000003", "device_id": "MIF-001", "timestamp": "2026-09-06T09:15:00Z", "state": "ON", "battery_percent": 90.2, "power_watts": 5.1, "boot_id": "boot-a"}
+{"message_id": "a1111111-0000-4000-8000-000000000004", "device_id": "MIF-001", "timestamp": "2026-09-06T10:00:00Z", "state": "OFF", "battery_percent": 89.8, "power_watts": 0.0, "boot_id": "boot-a"}
+{"message_id": "a2222222-0000-4000-8000-000000000001", "device_id": "MIF-002", "timestamp": "2026-09-06T08:00:00Z", "state": "ON", "battery_percent": 18.0, "power_watts": 5.5, "boot_id": "boot-b"}
+{"message_id": "a2222222-0000-4000-8000-000000000002", "device_id": "MIF-002", "timestamp": "2026-09-06T08:30:00Z", "state": "ON", "battery_percent": 16.5, "power_watts": 21.0, "boot_id": "boot-b"}
+{"message_id": "a3333333-0000-4000-8000-000000000001", "device_id": "MIF-003", "timestamp": "2026-09-06T08:00:00Z", "state": "ON", "battery_percent": 80.0, "power_watts": 4.9, "boot_id": "boot-c1"}
+{"message_id": "a3333333-0000-4000-8000-000000000002", "device_id": "MIF-003", "timestamp": "2026-09-06T09:00:00Z", "state": "ON", "battery_percent": 79.0, "power_watts": 5.0, "boot_id": "boot-c2"}
