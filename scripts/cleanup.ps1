@@ -124,7 +124,9 @@ $pathsToClean = @(
     "$RepoRoot\.ruff_cache",
     "$RepoRoot\.coverage",
     "$RepoRoot\htmlcov",
-    "$RepoRoot\data\generated"
+    "$RepoRoot\data\generated",
+    "$RepoRoot\frontend\node_modules",
+    "$RepoRoot\frontend\dist"
 )
 foreach ($p in $pathsToClean) {
     if (Test-Path $p) {

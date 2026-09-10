@@ -95,7 +95,8 @@ done
 echo
 echo "Cleaning project-local caches..."
 for p in "$REPO_ROOT/__pycache__" "$REPO_ROOT/.pytest_cache" "$REPO_ROOT/.ruff_cache" \
-         "$REPO_ROOT/.coverage" "$REPO_ROOT/htmlcov" "$REPO_ROOT/data/generated"; do
+         "$REPO_ROOT/.coverage" "$REPO_ROOT/htmlcov" "$REPO_ROOT/data/generated" \
+         "$REPO_ROOT/frontend/node_modules" "$REPO_ROOT/frontend/dist"; do
     if [ -e "$p" ]; then
         rm -rf "$p"
         echo "  Removed $p"
