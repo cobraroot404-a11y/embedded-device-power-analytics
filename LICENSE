@@ -1,47 +1,117 @@
-Embedded Device Usage & Power Analytics
+EMBEDDED DEVICE USAGE & POWER ANALYTICS
 Proprietary Source-Visible License
 
-Copyright (c) 2026 Gautham
-All rights reserved.
+Copyright (c) 2026 Gautham. All rights reserved.
 
-This repository and all associated source code, documentation, configuration
-files, diagrams, data samples, tests, scripts, dashboards, and related
-materials are proprietary works owned by Gautham unless explicitly stated
-otherwise.
 
-The source code is publicly visible primarily for educational, portfolio,
-demonstration, evaluation, and technical-review purposes.
+0. SUMMARY (non-binding — see the numbered sections below for the actual terms)
 
-Permission is granted to view and study the contents of this repository for
-personal, non-commercial educational and evaluation purposes.
+This repository is source-visible, not open source. You may read and study
+the code. You may not copy, modify, redistribute, sell, or reuse it — in
+whole or in substantial part — in any other project without the copyright
+owner's prior written permission.
 
-No permission is granted to copy, reproduce, modify, adapt, distribute,
-publish, sublicense, sell, commercially exploit, incorporate into another
-product or project, or create derivative works from any substantial portion
-of this repository without prior written permission from the copyright
-owner.
 
-Public availability of this repository does not constitute a grant of an
-open-source license and does not place the work in the public domain.
+1. DEFINITIONS
 
-No patent, trademark, commercial-use, redistribution, sublicensing, or
-derivative-work rights are granted.
+1.1 "Work" means this repository and all source code, documentation,
+    configuration files, diagrams, data samples, tests, scripts, dashboards,
+    and other materials contained in it, excluding Third-Party Components.
 
-Unless separately authorised in writing, use of this project in commercial
-products, services, academic submissions, redistributed software, derivative
-repositories, training datasets, or copied project submissions is
-prohibited.
+1.2 "Third-Party Components" means software, dependencies, container
+    images, libraries, fonts, and trademarks not authored by the copyright
+    owner that are referenced, vendored, or installed by the Work.
 
-Third-party software, dependencies, Docker images, libraries, trademarks,
-and other third-party materials remain subject to their respective licenses.
+1.3 "You" means the individual or entity accessing, viewing, or otherwise
+    making use of the Work.
 
-THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS
-FOR A PARTICULAR PURPOSE, NON-INFRINGEMENT, ACCURACY, OR RELIABILITY.
+1.4 "Owner" means the copyright holder identified above.
 
-IN NO EVENT SHALL THE COPYRIGHT OWNER BE LIABLE FOR ANY CLAIM, DAMAGES, OR
-OTHER LIABILITY ARISING FROM, OUT OF, OR IN CONNECTION WITH THE MATERIALS OR
-THEIR USE.
 
-Written permission from the copyright owner is required for any use beyond
-the limited viewing and personal educational-study rights described above.
+2. GRANT OF LIMITED LICENSE
+
+Subject to Section 3, the Owner grants You a limited, non-exclusive,
+non-transferable, revocable license to view, read, and study the Work,
+solely for Your own personal, non-commercial, educational, portfolio-review,
+and evaluation purposes.
+
+This license does not grant You any right to run the Work as a hosted
+service for others, incorporate it into a product or service, or otherwise
+exploit it commercially.
+
+
+3. RESTRICTIONS
+
+Except as expressly permitted in Section 2, You may not, without the
+Owner's prior written permission:
+
+  (a) copy, reproduce, or mirror the Work, in whole or in substantial part;
+  (b) modify, adapt, or create derivative works based on the Work;
+  (c) distribute, publish, sublicense, rent, lease, or sell the Work;
+  (d) incorporate the Work, or any substantial portion of it, into another
+      product, project, service, or repository;
+  (e) use the Work, or any substantial portion of it, in a commercial
+      product or service;
+  (f) submit the Work, or any substantial portion of it, as Your own work
+      in an academic, employment, or competitive context; or
+  (g) use the Work as training data for a machine-learning model, other
+      than as incidentally permitted by law.
+
+"Substantial part" is assessed by originality and effort, not merely by
+line count or file size.
+
+
+4. NO IMPLIED RIGHTS
+
+Public visibility of this repository does not constitute publication under
+an open-source license and does not place the Work in the public domain.
+No license to any patent, trademark, or trade secret of the Owner is
+granted, whether by implication, estoppel, or otherwise. All rights not
+expressly granted in Section 2 are reserved by the Owner.
+
+
+5. THIRD-PARTY COMPONENTS
+
+Third-Party Components remain subject to their own respective licenses.
+Nothing in this license extends any right to Third-Party Components beyond
+what their own licenses independently grant, and nothing in a Third-Party
+Component's license extends any right to the Work.
+
+
+6. DISCLAIMER OF WARRANTY
+
+THE WORK IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, NON-INFRINGEMENT, ACCURACY, OR
+RELIABILITY. THE OWNER DOES NOT WARRANT THAT THE WORK WILL BE ERROR-FREE OR
+UNINTERRUPTED.
+
+
+7. LIMITATION OF LIABILITY
+
+IN NO EVENT SHALL THE OWNER BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING
+FROM, OUT OF, OR IN CONNECTION WITH THE WORK OR ITS USE.
+
+
+8. TERMINATION
+
+This license terminates automatically if You breach any of its terms.
+Upon termination, You must cease all use of the Work permitted under
+Section 2.
+
+
+9. REQUESTING PERMISSION
+
+Any use beyond the limited viewing and educational-study rights described
+in Section 2 requires the Owner's prior written permission. Requests may be
+directed to the Owner via the contact information associated with this
+repository's hosting account.
+
+
+10. GOVERNING INTERPRETATION
+
+If any provision of this license is held unenforceable, the remaining
+provisions remain in full force and effect. This license states the entire
+agreement between You and the Owner regarding the Work and supersedes any
+prior understanding regarding its subject matter.
