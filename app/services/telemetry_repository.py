@@ -192,3 +192,120 @@ async def list_anomalies(
 async def count_recent_anomalies(session: AsyncSession, since: datetime) -> int:
     stmt = select(func.count()).select_from(Anomaly).where(Anomaly.detected_at >= since)
     return (await session.execute(stmt)).scalar_one()
+
+
+async def count_anomalies_for_device(session: AsyncSession, device_id: str, since: datetime) -> int:
+    stmt = (
+        select(func.count())
+        .select_from(Anomaly)
+        .where(Anomaly.device_id == device_id, Anomaly.detected_at >= since)
+    )
+    return (await session.execute(stmt)).scalar_one()
+
+
+async def get_telemetry_page(
+    session: AsyncSession,
+    *,
+    device_id: str | None,
+    state: str | None,
+    start: datetime | None,
+    end: datetime | None,
+    limit: int,
+    offset: int,
+) -> tuple[list[TelemetryEvent], int]:
+    """Backend-paginated raw telemetry listing for the Telemetry Explorer —
+    the full history is never sent to the browser in one response."""
+    conditions = []
+    if device_id:
+        conditions.append(TelemetryEvent.device_id == device_id)
+    if state:
+        conditions.append(TelemetryEvent.state == state)
+    if start:
+        conditions.append(TelemetryEvent.time >= start)
+    if end:
+        conditions.append(TelemetryEvent.time <= end)
+
+    count_stmt = select(func.count()).select_from(TelemetryEvent).where(*conditions)
+    total = (await session.execute(count_stmt)).scalar_one()
+
+    page_stmt = (
+        select(TelemetryEvent)
+        .where(*conditions)
+        .order_by(TelemetryEvent.time.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    rows = (await session.execute(page_stmt)).scalars().all()
+    return list(rows), total
+
+
+async def get_power_trend(
+    session: AsyncSession, start: datetime, end: datetime, bucket: str
+) -> list[tuple[datetime, float | None]]:
+    """Average observed power_watts per time bucket ('hour' or 'day') across
+    the whole fleet, for the fleet-wide power trend chart."""
+    bucket_expr = func.date_trunc(bucket, TelemetryEvent.time).label("bucket")
+    stmt = (
+        select(bucket_expr, func.avg(TelemetryEvent.power_watts))
+        .where(
+            TelemetryEvent.time >= start,
+            TelemetryEvent.time <= end,
+            TelemetryEvent.power_watts.is_not(None),
+        )
+        .group_by(bucket_expr)
+        .order_by(bucket_expr)
+    )
+    rows = (await session.execute(stmt)).all()
+    return [(row[0], row[1]) for row in rows]
+
+
+async def list_fleet_anomalies(
+    session: AsyncSession,
+    *,
+    device_id: str | None,
+    anomaly_type: str | None,
+    start: datetime | None,
+    end: datetime | None,
+    limit: int,
+    offset: int,
+) -> tuple[list[Anomaly], int]:
+    conditions = []
+    if device_id:
+        conditions.append(Anomaly.device_id == device_id)
+    if anomaly_type:
+        conditions.append(Anomaly.anomaly_type == anomaly_type)
+    if start:
+        conditions.append(Anomaly.event_time >= start)
+    if end:
+        conditions.append(Anomaly.event_time <= end)
+
+    count_stmt = select(func.count()).select_from(Anomaly).where(*conditions)
+    total = (await session.execute(count_stmt)).scalar_one()
+
+    page_stmt = (
+        select(Anomaly)
+        .where(*conditions)
+        .order_by(Anomaly.event_time.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    rows = (await session.execute(page_stmt)).scalars().all()
+    return list(rows), total
+
+
+async def get_telemetry_quality_counts(session: AsyncSession, since: datetime) -> dict:
+    total_stmt = (
+        select(func.count()).select_from(TelemetryEvent).where(TelemetryEvent.time >= since)
+    )
+    total = (await session.execute(total_stmt)).scalar_one()
+    return {"accepted": total}
+
+
+async def count_anomalies_by_type(session: AsyncSession, since: datetime) -> dict[str, int]:
+    stmt = (
+        select(Anomaly.anomaly_type, func.count())
+        .where(Anomaly.detected_at >= since)
+        .group_by(Anomaly.anomaly_type)
+    )
+    rows = (await session.execute(stmt)).all()
+    return {row[0]: row[1] for row in rows}

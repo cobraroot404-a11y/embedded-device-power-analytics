@@ -26,12 +26,19 @@ class Settings(BaseSettings):
     abnormal_power_multiplier: float = 2.5
 
     # Consumer metrics HTTP server (separate process from the API)
+    consumer_host: str = "localhost"
     consumer_metrics_port: int = 9100
+
+    # Other observability/frontend services, checked by GET /system/health
+    prometheus_url: str = "http://localhost:9090"
+    grafana_url: str = "http://localhost:3000"
+    frontend_health_url: str = "http://localhost:3000"
 
     # API
     api_host: str = "0.0.0.0"
     api_port: int = 8000
     log_level: str = "INFO"
+    cors_allow_origins: str = "http://localhost:3000"
 
     @property
     def gap_threshold_seconds(self) -> float:

@@ -4,11 +4,16 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.analytics.periods import VALID_PERIODS
+from app.analytics.severity import get_severity
 from app.core.config import Settings, get_settings
 from app.db.session import get_session
-from app.schemas.analytics import AnomalyOut, DeviceAnalytics, DeviceOut
+from app.schemas.analytics import AnomalyOut, DeviceAnalytics, DeviceOut, DeviceTimeline
 from app.services import telemetry_repository as repo
-from app.services.analytics_service import compute_device_analytics, is_device_active
+from app.services.analytics_service import (
+    compute_device_analytics,
+    get_device_timeline,
+    is_device_active,
+)
 
 router = APIRouter(tags=["devices"])
 
@@ -102,9 +107,28 @@ async def device_anomalies(
             id=str(a.id),
             device_id=a.device_id,
             anomaly_type=a.anomaly_type,
+            severity=get_severity(a.anomaly_type, a.details),
             detected_at=a.detected_at,
             event_time=a.event_time,
             details=a.details,
         )
         for a in anomalies
     ]
+
+
+@router.get("/devices/{device_id}/timeline", response_model=DeviceTimeline)
+async def device_timeline(
+    device_id: str,
+    period: str | None = Query(default="daily"),
+    start: datetime | None = Query(default=None),
+    end: datetime | None = Query(default=None),
+    session: AsyncSession = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+) -> DeviceTimeline:
+    _validate_period(period)
+    device = await repo.get_device(session, device_id)
+    if device is None:
+        raise HTTPException(status_code=404, detail=f"device '{device_id}' not found")
+    if (start is None) != (end is None):
+        raise HTTPException(status_code=422, detail="start and end must both be provided together")
+    return await get_device_timeline(session, device_id, period, start, end, settings)

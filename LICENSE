@@ -1,21 +1,47 @@
-MIT License
+Embedded Device Usage & Power Analytics
+Proprietary Source-Visible License
 
 Copyright (c) 2026 Gautham
+All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+This repository and all associated source code, documentation, configuration
+files, diagrams, data samples, tests, scripts, dashboards, and related
+materials are proprietary works owned by Gautham unless explicitly stated
+otherwise.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+The source code is publicly visible primarily for educational, portfolio,
+demonstration, evaluation, and technical-review purposes.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+Permission is granted to view and study the contents of this repository for
+personal, non-commercial educational and evaluation purposes.
+
+No permission is granted to copy, reproduce, modify, adapt, distribute,
+publish, sublicense, sell, commercially exploit, incorporate into another
+product or project, or create derivative works from any substantial portion
+of this repository without prior written permission from the copyright
+owner.
+
+Public availability of this repository does not constitute a grant of an
+open-source license and does not place the work in the public domain.
+
+No patent, trademark, commercial-use, redistribution, sublicensing, or
+derivative-work rights are granted.
+
+Unless separately authorised in writing, use of this project in commercial
+products, services, academic submissions, redistributed software, derivative
+repositories, training datasets, or copied project submissions is
+prohibited.
+
+Third-party software, dependencies, Docker images, libraries, trademarks,
+and other third-party materials remain subject to their respective licenses.
+
+THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE, NON-INFRINGEMENT, ACCURACY, OR RELIABILITY.
+
+IN NO EVENT SHALL THE COPYRIGHT OWNER BE LIABLE FOR ANY CLAIM, DAMAGES, OR
+OTHER LIABILITY ARISING FROM, OUT OF, OR IN CONNECTION WITH THE MATERIALS OR
+THEIR USE.
+
+Written permission from the copyright owner is required for any use beyond
+the limited viewing and personal educational-study rights described above.

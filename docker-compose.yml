@@ -37,6 +37,12 @@ services:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-telemetry}:${POSTGRES_PASSWORD:-telemetry_dev_password}@timescaledb:5432/${POSTGRES_DB:-embedded_telemetry}
       MQTT_HOST: mosquitto
       MQTT_PORT: "1883"
+      CONSUMER_HOST: telemetry-consumer
+      CONSUMER_METRICS_PORT: "9100"
+      PROMETHEUS_URL: http://prometheus:9090
+      GRAFANA_URL: http://grafana:3000
+      FRONTEND_HEALTH_URL: http://frontend:80
+      CORS_ALLOW_ORIGINS: ${CORS_ALLOW_ORIGINS:-http://localhost:3000}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
     ports:
       - "8000:8000"
@@ -98,12 +104,28 @@ services:
       - ./infrastructure/grafana/provisioning:/etc/grafana/provisioning:ro
       - grafana-data:/var/lib/grafana
     ports:
-      - "3000:3000"
+      - "3001:3000"
     depends_on:
       - prometheus
       - timescaledb
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+    ports:
+      - "3000:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:80/ || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5

@@ -13,6 +13,9 @@ htmlcov/
 .idea/
 generated/
 runtime/
+node_modules/
+frontend/dist/
+frontend/.vite/
 
 # Runtime data volumes (bind-mounted or generated locally, never committed)
 infrastructure/mosquitto/data/

@@ -1,9 +1,16 @@
 # Embedded Device Usage & Power Analytics
 
-A production-style IoT telemetry platform for embedded/embedded-adjacent devices:
-ingest MQTT telemetry from a fleet of devices, persist it as time-series data in
-TimescaleDB, and turn it into usage, power-saving, energy, and reliability
-analytics through a REST API and a Grafana dashboard.
+> [!IMPORTANT]
+> This repository is publicly viewable for educational, portfolio,
+> demonstration, and evaluation purposes. It is proprietary software and
+> is not released under an open-source license. Reuse, redistribution,
+> modification, derivative works, and commercial use require prior written
+> permission from the copyright owner.
+
+A Machine-in-Field (MIF) telemetry analytics platform for embedded/IoT device
+fleets: MQTT ingestion, TimescaleDB time-series storage, interval-based usage
+and power analytics, deterministic anomaly detection, and a custom React
+operations dashboard — backed by a realistic multi-device simulator.
 
 ## Overview
 
@@ -17,43 +24,46 @@ which ones are going dark, and which ones just rebooted?*
 This project answers that with a realistic ingestion pipeline that treats
 field data the way it actually arrives — duplicated, delayed, out of order,
 occasionally malformed, punctuated by reboots and silent gaps — and turns it
-into interval-based duration analytics rather than naive message counting.
+into interval-based duration analytics rather than naive message counting,
+surfaced through both a REST API and a purpose-built operations dashboard.
 
-## Features
+## Core Features
 
 - **MQTT ingestion** from an arbitrary number of devices publishing to
   `devices/{device_id}/telemetry`, consumed by a standalone async Python
-  service (independent of the API's request lifecycle).
+  service, independent of the API's request lifecycle.
 - **Schema validation & normalisation** (Pydantic v2): UUID message IDs,
   timezone-aware timestamps normalised to UTC, a closed `ON/SLEEP/OFF` state
   enum, bounded battery/power ranges.
 - **TimescaleDB time-series storage**: `telemetry_events` is a hypertable;
-  raw telemetry is the single authoritative source — no analytics-only
-  duplicated tables.
+  raw telemetry is the single authoritative source, plus a continuous
+  aggregate for ingestion-rate rollups.
 - **Field-data reliability handling**: dedup by `message_id`, out-of-order-safe
-  analytics (sorted by device timestamp, not arrival order), communication-gap
-  detection, `boot_id`-based reboot/session-boundary detection, and hard
-  rejection of malformed timestamps/states/battery/power values.
-- **Interval-based usage analytics**: ON/SLEEP/OFF duration, usage %,
-  power-saving %, correct handling across midnight/week/month boundaries.
-- **Power & energy estimation**: average power per state and an estimated
-  kWh figure, computed only where `power_watts` was actually observed.
+  analytics, communication-gap detection, `boot_id`-based reboot/session
+  detection, and rejection of malformed timestamps/states/battery/power.
+- **Interval-based usage analytics**: ON/SLEEP/OFF/UNKNOWN duration, usage %,
+  power-saving %, correct splitting across midnight/week/month boundaries.
+- **Power & energy analytics**: average power per state and an estimated kWh
+  figure, computed only where `power_watts` was actually observed.
 - **Deterministic anomaly detection**: rarely-used, excessive continuous ON,
   poor power-saving, communication gaps, reboots, low battery, abnormal power
-  — every threshold centralised in configuration.
-- **Fleet-level analytics**: aggregate usage/power-saving, highest/lowest
-  usage devices, inefficient devices, devices with gaps, anomaly totals,
-  estimated fleet energy.
+  — every threshold centralised in configuration, every severity rule-based.
+- **Fleet-level analytics**: state distribution, health distribution,
+  usage/power trends, highest/lowest usage devices, device efficiency matrix.
+- **FastAPI REST API** with real, non-fabricated system health checks.
+- **React + TypeScript operations dashboard**: fleet overview, device table,
+  per-device state timeline, usage/power analytics, anomaly dashboard,
+  telemetry explorer, system health.
 - **Prometheus metrics** for ingestion volume, validation outcomes, dedup,
   ordering, gaps, reboots, and processing errors.
-- **Grafana dashboard**, auto-provisioned on startup — no manual setup.
-- **Multi-device MQTT simulator** with 8 distinct behavioural profiles,
-  including one that deliberately misbehaves (duplicates/delays/gaps).
-- **Automated tests** (pytest): schema validation, the state-duration engine
-  (including the exact boundary-splitting examples from the design spec),
-  anomaly rules, and API/ingestion integration tests against a real
-  TimescaleDB.
-- **Docker Compose** runs the whole stack with one command.
+- **Grafana** for infrastructure/observability, auto-provisioned on startup.
+- **Multi-device MQTT simulator** with 8 behavioural profiles, including one
+  that deliberately misbehaves (duplicates/delays/gaps).
+- **Automated tests**: 85 backend tests (pytest, against real TimescaleDB)
+  and 15 frontend tests (Vitest + React Testing Library).
+- **Docker Compose** runs the whole stack — backend, frontend, broker,
+  database, and observability — with one command.
+- **GitHub Actions CI** for both backend and frontend.
 
 ## Architecture
 
@@ -64,6 +74,7 @@ flowchart TD
     CONS -->|validate, dedup,<br/>reliability checks| DB[(PostgreSQL + TimescaleDB<br/>devices / telemetry_events / anomalies)]
     DB --> ANALYTICS[Analytics Engine<br/>interval-based duration calc]
     ANALYTICS --> API[FastAPI REST API]
+    API --> FRONTEND[React + TypeScript<br/>Fleet Operations Dashboard]
     CONS -->|/metrics| PROM[Prometheus]
     API -->|/metrics| PROM
     PROM --> GRAF[Grafana]
@@ -74,10 +85,12 @@ flowchart TD
 ## Data Flow
 
 ```
-Device --(MQTT publish)--> Mosquitto --(subscribe devices/+/telemetry)--> Telemetry Consumer
+Embedded Device --(MQTT publish)--> Mosquitto --(subscribe devices/+/telemetry)--> Telemetry Consumer
   --> parse/validate --> dedup (message_id) --> reliability checks (gap/reboot/order)
   --> TimescaleDB (raw telemetry_events, devices, anomalies)
-  --> Analytics Engine (interval-based, on read) --> FastAPI --> Grafana / Swagger clients
+  --> Analytics Engine (interval-based, on read) --> FastAPI --> React Dashboard / Swagger clients
+
+Prometheus --> Grafana   (infrastructure/observability, separate from the product dashboard)
 ```
 
 The consumer and the API are separate OS processes/containers. The consumer
@@ -90,7 +103,7 @@ reachable — it only reads from TimescaleDB.
 {
   "message_id": "a1111111-0000-4000-8000-000000000001",
   "device_id": "MIF-001",
-  "timestamp": "2026-09-06T10:30:00Z",
+  "timestamp": "2026-09-10T10:30:00Z",
   "state": "ON",
   "battery_percent": 82.5,
   "power_watts": 4.7,
@@ -112,28 +125,30 @@ The server additionally stamps `ingested_at` (arrival time) — kept separate
 from `time` (the device's own event timestamp) precisely so ingestion delay
 or reordering can never corrupt duration analytics.
 
-## Reliability
+## Reliability Strategy
 
 - **Duplicates** — `INSERT ... ON CONFLICT DO NOTHING` on
   `(device_id, message_id, time)`; a replayed message changes nothing
   downstream.
 - **Delayed / out-of-order messages** — analytics always sort by the
-  device-reported `time`, never by arrival order, and the ingestion pipeline
-  compares each event against the device's current latest `time` to detect
-  (and count, via `telemetry_out_of_order_total`) late-arriving history.
+  device-reported `time`, never by arrival order.
+- **Malformed messages** — invalid JSON, an unrecognised topic shape, or a
+  schema violation is rejected with a specific reason label and never raises
+  past the pipeline — one bad message, or one bad device, never interrupts
+  ingestion for anyone else.
+- **Missing telemetry** — never assumed to mean the device stayed ON; time
+  with no telemetry is classified `UNKNOWN`, excluded from usage/power-saving
+  percentages.
 - **Communication gaps** — if two consecutive events for a device are more
   than `GAP_THRESHOLD_MINUTES` (default 30) apart, that interval is classified
-  `UNKNOWN`, **not** attributed to whatever state preceded it. A
+  `UNKNOWN`, not attributed to whatever state preceded it. A
   `communication_gap` anomaly is recorded with the gap duration.
 - **Reboots / session changes** — a change in `boot_id` between two
   consecutive events marks a new device session. The interval spanning that
   boundary is classified `UNKNOWN` (uninterrupted operation is never assumed
   across a reboot), and a `reboot` anomaly is recorded.
-- **Malformed messages** — invalid JSON, an unrecognised topic shape, or a
-  schema violation (bad UUID, non-timezone-aware timestamp, unknown state,
-  battery outside `0-100`, negative power) is rejected with a specific reason
-  label and **never** raises past the pipeline — one bad message, or one bad
-  device, never interrupts ingestion for anyone else.
+- **Unknown duration** — always excluded from the usage %/power-saving %
+  denominator, and always visible on the device timeline rather than hidden.
 
 ## Analytics Methodology
 
@@ -161,8 +176,9 @@ Time before the first known event, or after the last known event, is
 `UNKNOWN` — duration is **never manufactured** past what telemetry actually
 reported.
 
-See [`app/analytics/state_duration.py`](app/analytics/state_duration.py) for
-the full, precisely-commented implementation.
+See [`app/analytics/state_duration.py`](app/analytics/state_duration.py) and
+[`app/analytics/timeline.py`](app/analytics/timeline.py) for the full,
+precisely-commented implementation.
 
 ## Formulas
 
@@ -184,7 +200,8 @@ an energy measurement, and is never substituted in.
 ## Anomaly Rules
 
 All thresholds live in `app/core/config.py` (`Settings`), overridable via
-environment variables:
+environment variables. Severity (`INFO`/`WARNING`/`CRITICAL`) is derived
+deterministically in [`app/analytics/severity.py`](app/analytics/severity.py).
 
 | Anomaly                | Default rule                                  |
 |-------------------------|------------------------------------------------|
@@ -196,6 +213,57 @@ environment variables:
 | Reboot                  | `boot_id` changed between consecutive events   |
 | Abnormal power          | `power_watts > 2.5x` the device's own recent average for that state |
 
+## Frontend Dashboard
+
+The custom frontend is the primary product interface — device operations,
+analytics, and investigation. Grafana is infrastructure/observability. The
+frontend never embeds Grafana; it's a purpose-built console:
+
+| Page | Answers |
+|---|---|
+| **Overview** (`/`) | Fleet KPIs, state distribution, usage trend, energy by device, fleet health, device efficiency matrix, devices requiring attention |
+| **Devices** (`/devices`) | Searchable/sortable/filterable device table with pagination |
+| **Device Detail** (`/devices/:id`) | KPIs, state timeline (ON/SLEEP/OFF/UNKNOWN/reboot markers), power trend, battery trend, anomalies |
+| **Usage Analytics** (`/analytics/usage`) | Usage by device, state breakdown by device, daily usage trend, underutilised devices |
+| **Power Analytics** (`/analytics/power`) | Energy by device, fleet power trend, average power ranking, power-saving ranking, abnormal power events |
+| **Anomalies** (`/anomalies`) | Summary KPIs, filterable/paginated anomaly table with severity |
+| **Telemetry** (`/telemetry`) | Backend-paginated raw telemetry explorer with device/state filters |
+| **System Health** (`/system`) | Real reachability status for every service — never fabricated |
+
+### Screenshots
+
+Captured from the actual running stack, populated with real simulator data
+(20 devices, 8 behavioural profiles, 72 hours of backfilled telemetry).
+
+**Fleet Overview**
+![Fleet Overview](docs/screenshots/overview.png)
+
+**Device Detail — State Timeline**
+![Device Detail](docs/screenshots/device_detail.png)
+
+**Usage Analytics**
+![Usage Analytics](docs/screenshots/usage_analytics.png)
+
+**Power Analytics**
+![Power Analytics](docs/screenshots/power_analytics.png)
+
+**Anomaly Dashboard**
+![Anomalies](docs/screenshots/anomalies.png)
+
+**Devices**
+![Devices](docs/screenshots/devices.png)
+
+## Grafana vs. the Custom Frontend
+
+```
+Custom frontend  = product / device operations (this is what you demo)
+Grafana          = infrastructure / observability (ingestion rate, valid vs
+                    rejected messages, processing errors, service health)
+```
+
+Grafana is auto-provisioned with the **Embedded Device Fleet Overview**
+dashboard — no manual setup required.
+
 ## Technology Stack
 
 | Choice                        | Why                                                                 |
@@ -204,28 +272,30 @@ environment variables:
 | Eclipse Mosquitto (MQTT)       | Lightweight, standard IoT transport; decouples devices from the backend |
 | aiomqtt                        | Maintained asyncio-native MQTT client                                |
 | FastAPI + Pydantic v2          | Typed request/response models, free OpenAPI/Swagger docs             |
-| PostgreSQL + TimescaleDB       | Real time-series workload (hypertables, continuous aggregates) without a bespoke TSDB |
+| PostgreSQL + TimescaleDB       | Real time-series workload (hypertables, continuous aggregates)       |
 | SQLAlchemy 2 (async) + asyncpg | Typed, parameterised DB access; no raw string SQL for user data      |
 | Alembic                        | Versioned schema migrations                                          |
+| React + TypeScript + Vite      | Typed, fast-iterating SPA for the operations dashboard                |
+| Recharts                       | Composable charting that covers donuts/bars/lines/scatter without a heavy footprint |
+| Tailwind CSS                   | Utility-first styling without hand-rolled CSS sprawl                  |
 | Prometheus + Grafana           | Standard, self-hostable observability stack                          |
 | Docker Compose                 | Reproducible multi-service local stack, one command                  |
 
-Deliberately **not** used: Kafka, Kubernetes, Redis/Celery, cloud-managed
-services — this fleet size and workload doesn't need them, and adding them
-would be complexity without a corresponding benefit for a project this size.
+Deliberately **not** used: Kafka, Kubernetes, Redis/Celery, Next.js, Redux,
+cloud-managed services — this fleet size and workload doesn't need them, and
+adding them would be complexity without a corresponding benefit.
 
 ## Windows Setup
 
 1. Install [Docker Desktop for Windows](https://www.docker.com/products/docker-desktop/)
-   (WSL2 backend) and Python 3.12+.
+   (WSL2 backend), Python 3.12+, and Node.js 20+.
 2. Clone/copy this repository, then from the project root:
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-3. (Optional, for running tests/tools outside Docker) create a virtual
-   environment:
+3. (Optional, for running backend tools outside Docker):
 
 ```powershell
 python -m venv .venv
@@ -233,16 +303,42 @@ python -m venv .venv
 pip install -r requirements-dev.txt
 ```
 
-## Docker Execution
+## Docker Startup
 
 ```bash
 docker compose -p embedded_device_power_analytics up --build
 ```
 
-This starts Mosquitto, TimescaleDB, the API, the telemetry consumer,
-Prometheus, and Grafana. The API container runs `alembic upgrade head`
-before starting Uvicorn, so the schema (including the hypertable) is created
-automatically on first boot.
+This starts Mosquitto, TimescaleDB, the API, the telemetry consumer, the
+frontend, Prometheus, and Grafana. The API container runs `alembic upgrade
+head` before starting Uvicorn, so the schema (including the hypertable) is
+created automatically on first boot.
+
+## Frontend
+
+```
+http://localhost:3000
+```
+
+Served by nginx from a production build; API calls go through nginx's
+same-origin `/api` proxy to the backend, so no CORS configuration is needed
+in normal Docker use.
+
+## Swagger / OpenAPI
+
+```
+http://localhost:8000/docs
+```
+
+## Grafana
+
+```
+http://localhost:3001
+```
+
+(Note: the frontend uses port 3000; Grafana is mapped to 3001 to avoid a
+collision.) Anonymous viewer access is enabled for local development
+(`admin`/`admin` for full access).
 
 ## Simulator
 
@@ -263,44 +359,32 @@ Add `--seed 42` for a fully deterministic run, or generate rich historical
 data instantly instead of waiting for real time to pass:
 
 ```bash
-python -m simulator.run --devices 20 --backfill-hours 168 --mqtt-host localhost
+python -m simulator.run --devices 20 --backfill-hours 72 --mqtt-host localhost
 ```
 
 Each device is assigned one of 8 profiles round-robin: `normal`, `efficient`,
 `underutilised`, `inefficient`, `unreliable` (duplicates/delays/gaps),
 `rebooting`, `low_battery`, `abnormal_power`.
 
-## Swagger / OpenAPI
-
-```
-http://localhost:8000/docs
-```
-
 ## API
 
-| Endpoint                              | Notes                                       |
-|-----------------------------------------|----------------------------------------------|
-| `GET /health`                          | liveness                                     |
-| `GET /ready`                           | readiness (checks DB connectivity)           |
-| `GET /devices`                         | device registry                              |
-| `GET /devices/{device_id}`             | 404 if unknown                               |
-| `GET /devices/{device_id}/summary`     | quick daily snapshot                         |
-| `GET /devices/{device_id}/analytics`   | `?period=hourly\|daily\|weekly\|monthly` or `?start=&end=` |
-| `GET /devices/{device_id}/anomalies`   | recorded anomalies                            |
-| `GET /fleet/summary`                   | fleet-wide analytics                          |
-| `GET /metrics`                         | Prometheus exposition format                  |
-
-## Grafana
-
-```
-http://localhost:3000
-```
-
-Anonymous viewer access is enabled for local development (`admin`/`admin` for
-full access). The **Embedded Device Fleet Overview** dashboard is
-auto-provisioned — no manual dashboard construction needed.
+| Endpoint                                | Notes                                       |
+|-------------------------------------------|----------------------------------------------|
+| `GET /health`, `GET /ready`               | liveness / readiness (DB connectivity)       |
+| `GET /devices`, `GET /devices/{id}`       | device registry                              |
+| `GET /devices/{id}/summary`               | quick daily snapshot                         |
+| `GET /devices/{id}/analytics`             | `?period=hourly\|daily\|weekly\|monthly` or `?start=&end=` |
+| `GET /devices/{id}/anomalies`             | per-device anomalies                          |
+| `GET /devices/{id}/timeline`              | interval segments for the state timeline      |
+| `GET /fleet/summary`, `/overview`, `/states`, `/usage`, `/power` | fleet-wide analytics       |
+| `GET /anomalies`, `/anomalies/summary`    | fleet-wide anomalies, paginated + filterable  |
+| `GET /telemetry`                          | backend-paginated raw telemetry explorer      |
+| `GET /system/health`                      | real per-service reachability status          |
+| `GET /metrics`                            | Prometheus exposition format                  |
 
 ## Testing
+
+### Backend
 
 ```bash
 pip install -r requirements-dev.txt
@@ -313,6 +397,20 @@ docker compose -p embedded_device_power_analytics up -d timescaledb
 pytest -v
 
 ruff check .
+```
+
+> Integration tests truncate their tables after each test. Don't run them
+> against a database you want to keep demo data in — re-run the simulator
+> afterward if you do.
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run lint
+npm test
+npm run build
 ```
 
 ## Cleanup
@@ -329,10 +427,10 @@ Both scripts: run `docker compose -p embedded_device_power_analytics down
 --volumes --remove-orphans`, then verify and remove only resources carrying
 the `com.docker.compose.project=embedded_device_power_analytics` label,
 remove this project's own built images if unused, and individually check
-each third-party base image (Mosquitto/TimescaleDB/Prometheus/Grafana)
-against every remaining container before removing it — a base image still
-referenced by any other container on the machine is always preserved.
-**No global `docker system/image/volume prune` is ever used.**
+each third-party base image against every remaining container before
+removing it — a base image still referenced by any other container on the
+machine is always preserved. **No global `docker system/image/volume prune`
+is ever used.**
 
 ## Scalability
 
@@ -342,8 +440,8 @@ referenced by any other container on the machine is always preserved.
   hundreds (rather than thousands) of devices needs.
 - TimescaleDB hypertables handle the time-series access pattern (recent-data
   writes, time-range reads) better than a plain relational table would.
-- Ingestion (consumer) and reads (API) are already separate processes, so
-  either can be scaled independently.
+- Ingestion (consumer), reads (API), and presentation (frontend) are already
+  separate processes, so each can be scaled independently.
 - This is a **local, single-broker, single-consumer, single-database**
   reference implementation — it demonstrates the architecture, not
   internet-scale production infrastructure. A larger deployment would look at
@@ -359,6 +457,21 @@ referenced by any other container on the machine is always preserved.
 - Horizontally scaled consumers with topic-based partitioning
 - Managed cloud deployment (managed Postgres/Timescale, managed MQTT broker)
 
-## License
+## Contributions
 
-MIT License © 2026 Gautham
+Unsolicited contributions are not currently accepted. See
+[CONTRIBUTING.md](CONTRIBUTING.md).
+
+## License and Usage Rights
+
+Copyright © 2026 Gautham. All rights reserved.
+
+This project is source-visible for educational, portfolio, demonstration,
+and evaluation purposes. It is not open-source software.
+
+Viewing and studying the source for personal, non-commercial educational
+purposes is permitted. Copying, modification, redistribution, commercial
+use, sublicensing, publication, or creation of derivative works requires
+prior written permission.
+
+See the [LICENSE](LICENSE) file for complete terms.

@@ -116,3 +116,95 @@ async def test_all_supported_periods_accepted(client, db_session, period) -> Non
     await _seed_device(db_session, f"MIF-PERIOD-{period}", now)
     resp = await client.get(f"/devices/MIF-PERIOD-{period}/analytics", params={"period": period})
     assert resp.status_code == 200
+
+
+async def test_device_timeline_returns_segments(client, db_session) -> None:
+    now = datetime.now(UTC)
+    await _seed_device(db_session, "MIF-210", now)
+    resp = await client.get("/devices/MIF-210/timeline", params={"period": "daily"})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["device_id"] == "MIF-210"
+    assert isinstance(body["segments"], list)
+    assert len(body["segments"]) > 0
+
+
+async def test_unknown_device_timeline_returns_404(client) -> None:
+    resp = await client.get("/devices/DOES-NOT-EXIST/timeline")
+    assert resp.status_code == 404
+
+
+async def test_fleet_overview(client, db_session) -> None:
+    now = datetime.now(UTC)
+    await _seed_device(db_session, "MIF-211", now)
+    resp = await client.get("/fleet/overview")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert "summary" in body
+    assert "states" in body
+    assert "health" in body
+
+
+async def test_fleet_states(client, db_session) -> None:
+    now = datetime.now(UTC)
+    await _seed_device(db_session, "MIF-212", now)
+    resp = await client.get("/fleet/states")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["total"] == 1
+    assert body["on"] + body["sleep"] + body["off"] + body["unknown"] == 1
+
+
+async def test_fleet_usage_trend(client, db_session) -> None:
+    now = datetime.now(UTC)
+    await _seed_device(db_session, "MIF-213", now)
+    resp = await client.get("/fleet/usage", params={"period": "daily"})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body["points"]) > 0
+
+
+async def test_fleet_power_analytics(client, db_session) -> None:
+    now = datetime.now(UTC)
+    await _seed_device(db_session, "MIF-214", now)
+    resp = await client.get("/fleet/power", params={"period": "daily"})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body["devices"]) == 1
+
+
+async def test_telemetry_explorer_pagination(client, db_session) -> None:
+    now = datetime.now(UTC)
+    await _seed_device(db_session, "MIF-215", now)
+    resp = await client.get("/telemetry", params={"device_id": "MIF-215", "limit": 1})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["total"] == 2
+    assert len(body["items"]) == 1
+    assert body["limit"] == 1
+
+
+async def test_anomalies_listing_and_summary(client, db_session) -> None:
+    now = datetime.now(UTC)
+    await _seed_device(db_session, "MIF-216", now)
+    list_resp = await client.get("/anomalies")
+    assert list_resp.status_code == 200
+    assert "items" in list_resp.json()
+
+    summary_resp = await client.get("/anomalies/summary")
+    assert summary_resp.status_code == 200
+    body = summary_resp.json()
+    assert "total_active" in body
+
+
+async def test_system_health_reports_all_services(client) -> None:
+    resp = await client.get("/system/health")
+    assert resp.status_code == 200
+    body = resp.json()
+    names = {s["name"] for s in body["services"]}
+    expected = {
+        "fastapi", "mqtt_broker", "telemetry_consumer", "timescaledb", "prometheus", "grafana", "frontend",
+    }
+    assert expected <= names
+    for service in body["services"]:
+        assert service["status"] in {"healthy", "degraded", "unavailable", "unknown"}
